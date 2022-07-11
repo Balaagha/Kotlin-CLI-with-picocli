@@ -14,6 +14,7 @@ repositories {
 dependencies {
     // ClI
     implementation ("info.picocli:picocli:4.6.3")
+    implementation ("org.mapdb:mapdb:3.0.8")
 
     // json
     implementation ("com.google.code.gson:gson:2.9.0")
