@@ -1,5 +1,12 @@
+import commands.HelloCommand
+import picocli.CommandLine
 
 
-fun main(args: Array<String>) {
-    println("start")
+object App {
+    @JvmStatic
+    fun main(args: Array<String>) {
+        CommandLine(HelloCommand).execute(*args)
+    }
 }
+
+
