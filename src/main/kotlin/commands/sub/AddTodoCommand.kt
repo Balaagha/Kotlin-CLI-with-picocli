@@ -33,8 +33,7 @@ object AddTodoCommand : Callable<Int> {
     )
     lateinit var createdDate: Date
 
-    const val SUCCESS: Int = 0
-    const val FAILURE: Int = 1
+    private const val SUCCESS: Int = 0
 
     @JvmStatic
     fun main(args: Array<String>) {
