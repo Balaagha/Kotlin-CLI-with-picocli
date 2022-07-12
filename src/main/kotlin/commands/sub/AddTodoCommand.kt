@@ -1,9 +1,13 @@
 package commands.sub
 
 import picocli.CommandLine
+import service.TodoFactory.service
+import service.TodoService
+import service.model.Todo
 import java.util.*
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
+
 
 @CommandLine.Command(
     name = "add",
@@ -19,19 +23,13 @@ import kotlin.system.exitProcess
 )
 object AddTodoCommand : Callable<Int> {
 
-    @CommandLine.Option(
-        names = ["-m", "--message"],
-        required = true,
-        description = ["a Todo Note or a Message"]
-    )
+    @CommandLine.Option(names = ["-m", "--message"], required = true, description = ["a Todo Note or a Message"])
     lateinit var message: Array<String>
 
-    @CommandLine.Option(
-        names = ["--create-date"],
-        required = false,
-        description = ["Created date for the Todo[s]"]
-    )
-    lateinit var createdDate: Date
+    @CommandLine.Option(names = ["--create-date"], required = false, description = ["Created date for the Todo[s]"])
+    var createdDate: Date? = null
+
+    private var todoService: TodoService? = null
 
     private const val SUCCESS: Int = 0
 
@@ -41,10 +39,22 @@ object AddTodoCommand : Callable<Int> {
         exitProcess(exitStatus)
     }
 
+    init {
+        todoService = service
+    }
+
     override fun call(): Int {
-        println("[add] Add Command")
-        println("createdDate = $createdDate")
-        message.forEach(::println)
+        if (createdDate == null) {
+            message.forEach { todoMessage ->
+                val todo: Todo? = todoService?.createTodo(todoMessage)
+                println("New Task ID is " + todo?.id)
+            }
+        } else {
+            message.forEach { todoMessage ->
+                val todo: Todo? = todoService!!.createTodo(todoMessage, createdDate)
+                println("New Task ID is " + todo?.id)
+            }
+        }
         return SUCCESS
     }
 

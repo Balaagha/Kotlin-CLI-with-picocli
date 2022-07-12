@@ -30,7 +30,8 @@ object TodoCommand : Callable<Int> {
     @JvmStatic
     fun main(args: Array<String>) {
         val exitStatus = CommandLine(TodoCommand).execute(
-            "--help"
+            "add","--message=Test1",
+            "add","--message=Test2","--create-date=2021-01-01"
         )
         exitProcess(exitStatus)
     }
