@@ -5,26 +5,13 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 
-class Todo : Serializable {
-    var id: Long? = null
-    var message: String
-    var status = Status.CREATED
-    var createdOn = Date()
-    var modifiedOn = Date()
-
-    constructor(message: String) {
-        this.message = message
-    }
-
-    constructor(message: String, createdOn: Date) {
-        this.message = message
-        this.createdOn = createdOn
-    }
-
-    constructor(id: Long) {
-        this.message = ""
-        this.id = id
-    }
+data class Todos(
+    var id: Long? = null,
+    var message: String,
+    var status: Status = Status.CREATED,
+    var createdOn: Date = Date(),
+    var modifiedOn: Date = Date(),
+): Serializable {
 
     override fun toString(): String {
         val simpleDateFormat = SimpleDateFormat("YYYY/MMM/DD HH:MM")

@@ -17,13 +17,13 @@ interface TodoService {
 
     fun deleteById(id: Long?): Boolean
 
-    fun findAll(): List<Todo?>?
+    fun findAll(): List<Todo?>
 
-    fun findByIds(ids: List<Long?>?): List<Todo?>?
+    fun findByIds(ids: List<Long?>?): List<Todo?>
 
-    fun findByStatus(status: Status?): List<Todo?>?
+    fun findByStatus(status: Status?): List<Todo?>
 
-    fun findById(id: Long?): Optional<Todo?>?
+    fun findById(id: Long?): Todo?
 
-    fun findByStatus(statuses: List<Status?>?): List<Todo?>?
+    fun findByStatus(statuses: List<Status?>?): List<Todo?>
 }

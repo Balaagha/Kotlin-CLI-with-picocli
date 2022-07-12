@@ -2,13 +2,12 @@ package service.impl
 
 import org.mapdb.DB
 import org.mapdb.DBMaker.fileDB
-import org.mapdb.HTreeMap
 import org.mapdb.Serializer
 import service.TodoService
 import service.model.Status
 import service.model.Todo
 import java.util.*
-import kotlin.collections.ArrayList
+import java.util.concurrent.ConcurrentMap
 
 
 class TodoServiceImpl : TodoService {
@@ -20,13 +19,7 @@ class TodoServiceImpl : TodoService {
     }
 
     private lateinit var db: DB
-
-    private lateinit var map: HTreeMap<Long, Any>
-
-    var todoComparator = Comparator<Todo> { o1, o2 ->
-        o1.createdOn.compareTo(o2.createdOn)
-    }
-
+    private lateinit var map: ConcurrentMap<Long, Any>
 
     private fun start() {
         db = fileDB(TODO_MAPDB).make()
@@ -38,20 +31,24 @@ class TodoServiceImpl : TodoService {
     }
 
     private fun operationOnDb(
-        task: Todo,
+        task: Todo? = null,
         operationType: OperationType = OperationType.ADD,
-        block: ((task: Todo) -> Todo)? = null
+        taskExecutorBlock: ((task: Todo) -> Todo)? = null,
+        block: (() -> Unit)? = null
     ) {
         start()
-        val executedTask = block?.invoke(task) ?: task
-        when (operationType) {
-            OperationType.ADD -> {
-                map[executedTask.id] = executedTask
-            }
-            OperationType.DELETE -> {
-                map.remove(executedTask.id)
+        task?.let { mTask ->
+            val executedTask = taskExecutorBlock?.invoke(mTask) ?: mTask
+            when (operationType) {
+                OperationType.ADD -> {
+                    map[executedTask.id] = executedTask
+                }
+                OperationType.DELETE -> {
+                    map.remove(executedTask.id)
+                }
             }
         }
+        block?.invoke()
         shutdown()
     }
 
@@ -65,7 +62,7 @@ class TodoServiceImpl : TodoService {
             val todo = Todo(mTodoMessage)
             operationOnDb(
                 task = todo,
-                block = { mTask ->
+                taskExecutorBlock = { mTask ->
                     mTask.id = getNewTaskId()
                     createdDate?.let { mTask.createdOn = it }
                     mTask
@@ -78,13 +75,11 @@ class TodoServiceImpl : TodoService {
     }
 
     override fun updateMessage(taskId: Long?, message: String?): Todo? {
-        val byId = findById(taskId)
+        val task = findById(taskId)
 
-        return if (byId?.isPresent == true) {
+        return if (task != null) {
             message?.let { mMessage ->
-                val task = byId.get().apply {
-                    this.message = mMessage
-                }
+                task.message = mMessage
                 operationOnDb(task = task)
                 task
             } ?: run {
@@ -96,13 +91,11 @@ class TodoServiceImpl : TodoService {
     }
 
     override fun updateStatus(taskId: Long?, status: Status?): Todo? {
-        val byId = findById(taskId)
+        val task = findById(taskId)
 
-        return if (byId?.isPresent == true) {
+        return if (task != null) {
             status?.let { mStatus ->
-                val task = byId.get().apply {
-                    this.status = mStatus
-                }
+                task.status = mStatus
                 operationOnDb(task = task)
                 task
             } ?: run {
@@ -115,7 +108,8 @@ class TodoServiceImpl : TodoService {
 
     override fun markCompletedById(id: Long?): Boolean {
         val task = findById(id)
-        return if (task?.isPresent == true) {
+
+        return if (task != null) {
             val updatedTodo = updateStatus(id, Status.COMPLETED)
             Objects.nonNull(updatedTodo)
         } else {
@@ -136,36 +130,71 @@ class TodoServiceImpl : TodoService {
     }
 
     override fun deleteById(id: Long?): Boolean {
-        return true
+        return if (id != null) {
+            operationOnDb(
+                task = Todo(id = id),
+                operationType = OperationType.DELETE
+            )
+            true
+        } else {
+            false
+        }
     }
 
-    override fun findAll(): List<Todo?>? {
-        start()
+    override fun findAll(): List<Todo?> {
         val taskList: ArrayList<Todo> = arrayListOf()
-
-        map.values.stream().forEach{
-            if (it is Todo){
-                taskList.add(it)
+        operationOnDb {
+            map.values.stream().forEach {
+                if (it is Todo) {
+                    taskList.add(it)
+                }
             }
         }
-        shutdown()
+        return taskList.sortedWith(compareBy { it.createdOn })
+    }
+    override fun findByIds(ids: List<Long?>?): List<Todo?> {
+        val taskList: ArrayList<Todo> = arrayListOf()
+        operationOnDb {
+            ids?.stream()?.map { map[it] }?.forEach {
+                if (it is Todo) {
+                    taskList.add(it)
+                }
+            }
+        }
         return taskList
     }
 
-    override fun findByIds(ids: List<Long?>?): List<Todo?>? {
-        return null
+    override fun findByStatus(status: Status?): List<Todo?> {
+        val todoList: ArrayList<Todo> = ArrayList()
+
+        findAll().forEach { todo ->
+            if (todo != null && todo.status === status) {
+                todoList.add(todo)
+            }
+        }
+
+        return todoList
+
     }
 
-    override fun findByStatus(status: Status?): List<Todo?>? {
-        return null
+    override fun findByStatus(statuses: List<Status?>?): List<Todo?> {
+        val todoList: ArrayList<Todo> = ArrayList()
+        findAll().forEach { todo ->
+            if (todo != null && statuses?.contains(todo.status) == true) {
+                todoList.add(todo)
+            }
+        }
+        return todoList
     }
 
-    override fun findByStatus(statuses: List<Status?>?): List<Todo?>? {
-        return null
-    }
-
-    override fun findById(id: Long?): Optional<Todo?>? {
-        return null
+    override fun findById(id: Long?): Todo? {
+        var task: Todo? = null
+        operationOnDb {
+            id?.let { taskId ->
+                task = (map[taskId] as? Todo)
+            }
+        }
+        return task
     }
 
     enum class OperationType {

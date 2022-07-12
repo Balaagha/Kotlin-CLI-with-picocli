@@ -11,11 +11,17 @@ object App {
         val service = service
 
         // Basic implementation for TodoService
-        service.createTodo("First task")
-        service.createTodo("Second task")
+        service.createTodo("task7")
+        service.createTodo("task8")
+        service.createTodo("task9")
+        service.createTodo("task10")
         println("Printing All Tasks");
         service.findAll()?.forEach {
-            println(it?.message)
+            println("message: ${it?.message}, date: ${it?.createdOn}, id: ${it?.id}")
+        }
+
+        service.findByIds(listOf(1,2,3,4,6))?.forEach {
+            println("message: ${it?.message}, date: ${it?.createdOn}, id: ${it?.id}")
         }
 
     }
